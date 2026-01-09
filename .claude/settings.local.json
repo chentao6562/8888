@@ -59,7 +59,10 @@
       "Bash(powershell:*)",
       "Bash(python3:*)",
       "Bash(python:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(sshpass -p 'c65623518+' ssh -o StrictHostKeyChecking=no root@39.104.13.41 \"cd /root/projects/8888/server && npx prisma db push --force-reset 2>&1 || npx prisma db push 2>&1\")",
+      "Bash(expect -c \"\nspawn ssh -o StrictHostKeyChecking=no root@39.104.13.41 \"\"cd /root/projects/8888/server && npx prisma db push --accept-data-loss 2>&1\"\"\nexpect {\n    \"\"*password*\"\" { send \"\"c65623518+\\\\r\"\"; exp_continue }\n    eof\n}\n\")",
+      "Bash(choco install:*)"
     ]
   }
 }

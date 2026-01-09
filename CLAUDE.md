@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **所有与用户的对话必须使用中文**
 - **每次测试都在服务器上实地开展**：自动上传到 GitHub → 服务器自动拉取 → 测试
 - **AI 助手必须自主完成服务器部署，不要反复询问用户密码**
+- **SSH 连接必须使用 expect 自动输入密码**（见下方 SSH 自动登录部分）
 
 ## 项目概述
 
@@ -127,7 +128,70 @@ mysql -u root -p'c65623518+' gongsiguanli_db
 
 ## SSH 配置
 
-### 本地 SSH 配置 (~/.ssh/config)
+### SSH 自动登录（强制使用）
+
+**重要：AI 助手必须使用以下方式自动输入密码，禁止让用户手动输入！**
+
+#### 方法1：使用 plink（PuTTY 工具，Windows 推荐）
+```bash
+# 先安装 PuTTY: choco install putty -y
+# 执行远程命令（必须带 hostkey 参数！）
+plink -hostkey "SHA256:Z3XUwhYkR29w/XBVhn8cYgP98MW8oi0Gnm3V8QqKy5Y" -batch -pw "c65623518+" root@39.104.13.41 "你的命令"
+
+# 示例
+plink -hostkey "SHA256:Z3XUwhYkR29w/XBVhn8cYgP98MW8oi0Gnm3V8QqKy5Y" -batch -pw "c65623518+" root@39.104.13.41 "pm2 list"
+plink -hostkey "SHA256:Z3XUwhYkR29w/XBVhn8cYgP98MW8oi0Gnm3V8QqKy5Y" -batch -pw "c65623518+" root@39.104.13.41 "cd /root/projects/8888/server && npx prisma db push --accept-data-loss"
+```
+
+#### 方法2：使用 sshpass（Linux/Mac/Git Bash）
+```bash
+# 安装: apt install sshpass 或 brew install sshpass
+sshpass -p 'c65623518+' ssh -o StrictHostKeyChecking=no root@39.104.13.41 "你的命令"
+```
+
+#### 方法3：使用 expect（Linux/Mac）
+```bash
+expect -c "
+spawn ssh -o StrictHostKeyChecking=no root@39.104.13.41 \"你的命令\"
+expect {
+    \"*password*\" { send \"c65623518+\r\"; exp_continue }
+    eof
+}
+"
+```
+
+#### 方法4：使用 PowerShell（Windows 原生）
+```powershell
+# 使用 Posh-SSH 模块
+Install-Module -Name Posh-SSH -Force
+$password = ConvertTo-SecureString "c65623518+" -AsPlainText -Force
+$cred = New-Object System.Management.Automation.PSCredential("root", $password)
+$session = New-SSHSession -ComputerName 39.104.13.41 -Credential $cred -AcceptKey
+Invoke-SSHCommand -SessionId $session.SessionId -Command "你的命令"
+```
+
+#### 常用命令示例（Windows plink）
+```bash
+# 服务器主机密钥（必须带上！）
+HOSTKEY="SHA256:Z3XUwhYkR29w/XBVhn8cYgP98MW8oi0Gnm3V8QqKy5Y"
+
+# 查看 PM2 进程列表
+plink -hostkey "SHA256:Z3XUwhYkR29w/XBVhn8cYgP98MW8oi0Gnm3V8QqKy5Y" -batch -pw "c65623518+" root@39.104.13.41 "pm2 list"
+
+# 执行数据库迁移
+plink -hostkey "SHA256:Z3XUwhYkR29w/XBVhn8cYgP98MW8oi0Gnm3V8QqKy5Y" -batch -pw "c65623518+" root@39.104.13.41 "cd /root/projects/8888/server && npx prisma db push --accept-data-loss"
+
+# 查看服务日志
+plink -hostkey "SHA256:Z3XUwhYkR29w/XBVhn8cYgP98MW8oi0Gnm3V8QqKy5Y" -batch -pw "c65623518+" root@39.104.13.41 "pm2 logs gongsiguanli-api --lines 30 --nostream"
+
+# 重启服务
+plink -hostkey "SHA256:Z3XUwhYkR29w/XBVhn8cYgP98MW8oi0Gnm3V8QqKy5Y" -batch -pw "c65623518+" root@39.104.13.41 "pm2 restart gongsiguanli-api"
+
+# 拉取代码并重启
+plink -hostkey "SHA256:Z3XUwhYkR29w/XBVhn8cYgP98MW8oi0Gnm3V8QqKy5Y" -batch -pw "c65623518+" root@39.104.13.41 "cd /root/projects/8888/server && git pull origin main && npm run build && pm2 restart gongsiguanli-api"
+```
+
+### 本地 SSH 配置 (~/.ssh/config)（备用）
 ```
 # 公司管理项目专用 - GitHub
 Host github-gongsiguanli
@@ -141,15 +205,6 @@ Host aliyun-gongsiguanli
     User root
     IdentityFile ~/.ssh/id_ed25519_gongsiguanli
     StrictHostKeyChecking no
-```
-
-### SSH 连接命令
-```bash
-# 连接服务器（无需密码）
-ssh aliyun-gongsiguanli
-
-# 执行远程命令
-ssh aliyun-gongsiguanli "pm2 list"
 ```
 
 ### Git 配置
