@@ -20,3 +20,6 @@ export {
   notFoundHandler,
   catchAsync
 } from './errorHandler';
+
+// 文件上传中间件
+export { uploadExcel, uploadMaterial, uploadMultiple } from './upload';

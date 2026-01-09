@@ -56,9 +56,9 @@ import userRoutes from './user.routes';
 import projectRoutes from './project.routes';
 
 // P1 数据采集模块
-// import accountRoutes from './account.routes';
-// import trafficRoutes from './traffic.routes';
-// import leadRoutes from './lead.routes';
+import accountRoutes from './account.routes';
+import trafficRoutes from './traffic.routes';
+import leadRoutes from './lead.routes';
 
 // P2 业务增强模块
 // import customerRoutes from './customer.routes';
@@ -90,9 +90,9 @@ router.use('/users', userRoutes);
 router.use('/projects', projectRoutes);
 
 // P1 数据采集模块
-// router.use('/accounts', accountRoutes);
-// router.use('/traffic', trafficRoutes);
-// router.use('/leads', leadRoutes);
+router.use('/accounts', accountRoutes);
+router.use('/traffic', trafficRoutes);
+router.use('/leads', leadRoutes);
 
 // P2 业务增强模块
 // router.use('/customers', customerRoutes);
