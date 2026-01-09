@@ -55,6 +55,31 @@ pm2 restart gongsiguanli-api          # 重启服务
 | 密码 | `c65623518+` |
 | 项目目录 | `/root/projects/8888` |
 
+## 项目目录结构
+
+```
+8888/
+├── CLAUDE.md              # 项目配置文件
+├── docs/                  # 设计文档
+│   ├── 需求文档.md
+│   ├── 业务流程图.md
+│   ├── 数据库设计.md
+│   └── 原型设计.md
+└── server/                # 后端服务
+    ├── src/               # 源代码
+    │   ├── index.ts       # 入口文件
+    │   ├── routes/        # 路由
+    │   ├── controllers/   # 控制器
+    │   ├── middlewares/   # 中间件
+    │   ├── services/      # 业务逻辑
+    │   └── utils/         # 工具函数
+    ├── prisma/            # Prisma ORM
+    │   └── schema.prisma  # 数据库模型
+    ├── dist/              # 编译输出
+    ├── package.json
+    └── tsconfig.json
+```
+
 ## 数据库
 
 - **类型**: MySQL（本地安装在服务器上）

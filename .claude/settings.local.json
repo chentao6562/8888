@@ -13,7 +13,15 @@
       "Bash(curl -s http://39.104.13.41/webhook -X GET)",
       "Bash(git init:*)",
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n初始化公司管理系统项目\n\n- 添加项目文档：需求文档、业务流程图、数据库设计、原型设计\n- 创建后端项目结构：Express + Prisma + TypeScript\n- 配置 Prisma Schema（包含所有数据表）\n- 添加 CLAUDE.md 项目配置文件\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(ls:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(curl -s http://39.104.13.41:3000/api/health)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n更新 CLAUDE.md 添加项目目录结构\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
