@@ -207,6 +207,7 @@ model Account {
   platform    Platform
   accountName String       @map("account_name") @db.VarChar(100)
   accountId   String?      @map("account_id") @db.VarChar(100)
+  remark      String?      @db.VarChar(255) // 备注，用于CSV导入匹配
   followers   Int          @default(0)
   operatorId  Int?         @map("operator_id")
   status      Int          @default(1) @db.TinyInt
@@ -218,6 +219,7 @@ model Account {
   trafficData TrafficData[]
   contentSchedules ContentSchedule[]
 
+  @@unique([platform, accountName]) // 同一平台账号名唯一
   @@map("accounts")
 }
 
@@ -232,13 +234,17 @@ enum Platform {
 model TrafficData {
   id             Int      @id @default(autoincrement())
   accountId      Int      @map("account_id")
-  contentTitle   String?  @map("content_title") @db.VarChar(255)
+  contentTitle   String?  @map("content_title") @db.VarChar(500)
+  contentType    String?  @map("content_type") @db.VarChar(20) // 视频/图文
+  contentUrl     String?  @map("content_url") @db.Text // 内容链接
   publishDate    DateTime? @map("publish_date") @db.Date
-  views          Int      @default(0)
-  likes          Int      @default(0)
-  comments       Int      @default(0)
-  shares         Int      @default(0)
-  saves          Int      @default(0)
+  publishTime    DateTime? @map("publish_time") // 完整发布时间（含时分秒）
+  views          Int      @default(0) // 播放量/阅读量
+  likes          Int      @default(0) // 点赞数
+  comments       Int      @default(0) // 评论数
+  shares         Int      @default(0) // 分享数
+  saves          Int      @default(0) // 收藏数
+  recommends     Int?     // 推荐量
   completionRate Decimal? @map("completion_rate") @db.Decimal(5, 2)
   importBatch    String?  @map("import_batch") @db.VarChar(50)
   createdAt      DateTime @default(now()) @map("created_at")
