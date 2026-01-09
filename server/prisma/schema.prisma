@@ -1,0 +1,544 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique @db.VarChar(50)
+  password  String   @db.VarChar(255)
+  name      String   @db.VarChar(50)
+  phone     String?  @db.VarChar(20)
+  email     String?  @db.VarChar(100)
+  role      UserRole @default(staff)
+  avatar    String?  @db.VarChar(255)
+  status    Int      @default(1) @db.TinyInt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  createdProjects  Project[]       @relation("ProjectCreator")
+  projectMembers   ProjectMember[]
+  assignedIndicators Indicator[]   @relation("IndicatorAssignee")
+  operatedAccounts Account[]       @relation("AccountOperator")
+  assignedLeads    Lead[]          @relation("LeadAssignee")
+  leadLogs         LeadLog[]
+  importRecords    ImportRecord[]
+  aiAnalyses       AiAnalysis[]
+  dailyReports     DailyReport[]
+  weeklyReports    WeeklyReport[]
+  monthlyReports   MonthlyReport[]
+  feedbacks        Feedback[]
+  projectComments  ProjectComment[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  admin
+  manager
+  operator
+  sales
+  staff
+}
+
+// 项目表
+model Project {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(100)
+  description String?       @db.Text
+  goal        String?       @db.Text
+  status      ProjectStatus @default(active)
+  startDate   DateTime?     @map("start_date") @db.Date
+  endDate     DateTime?     @map("end_date") @db.Date
+  templateId  Int?          @map("template_id")
+  createdBy   Int?          @map("created_by")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  // 关联关系
+  creator     User?           @relation("ProjectCreator", fields: [createdBy], references: [id])
+  template    ProjectTemplate? @relation(fields: [templateId], references: [id])
+  members     ProjectMember[]
+  indicators  Indicator[]
+  accounts    Account[]
+  leads       Lead[]
+  stages      ProjectStage[]
+  warnings    ProjectWarning[]
+  comments    ProjectComment[]
+
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  active
+  completed
+  paused
+}
+
+// 项目模板表
+model ProjectTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  stages      Json?    // 阶段配置 JSON
+  indicators  Json?    // 默认指标配置 JSON
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  projects    Project[]
+
+  @@map("project_templates")
+}
+
+// 项目阶段表
+model ProjectStage {
+  id          Int         @id @default(autoincrement())
+  projectId   Int         @map("project_id")
+  name        String      @db.VarChar(100)
+  description String?     @db.Text
+  sortOrder   Int         @default(0) @map("sort_order")
+  status      StageStatus @default(pending)
+  startDate   DateTime?   @map("start_date") @db.Date
+  endDate     DateTime?   @map("end_date") @db.Date
+  dueDate     DateTime?   @map("due_date") @db.Date
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  project     Project     @relation(fields: [projectId], references: [id])
+
+  @@map("project_stages")
+}
+
+enum StageStatus {
+  pending
+  in_progress
+  completed
+  delayed
+}
+
+// 项目成员表
+model ProjectMember {
+  id        Int      @id @default(autoincrement())
+  projectId Int      @map("project_id")
+  userId    Int      @map("user_id")
+  role      String?  @db.VarChar(50)
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  project   Project  @relation(fields: [projectId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+// 指标表
+model Indicator {
+  id           Int              @id @default(autoincrement())
+  projectId    Int              @map("project_id")
+  name         String           @db.VarChar(100)
+  description  String?          @db.Text
+  targetValue  Decimal          @default(0) @map("target_value") @db.Decimal(15, 2)
+  currentValue Decimal          @default(0) @map("current_value") @db.Decimal(15, 2)
+  unit         String?          @db.VarChar(20)
+  priority     IndicatorPriority @default(normal)
+  assignedTo   Int?             @map("assigned_to")
+  dueDate      DateTime?        @map("due_date") @db.Date
+  status       IndicatorStatus  @default(pending)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  project      Project          @relation(fields: [projectId], references: [id])
+  assignee     User?            @relation("IndicatorAssignee", fields: [assignedTo], references: [id])
+
+  @@map("indicators")
+}
+
+enum IndicatorPriority {
+  urgent_important
+  important
+  urgent
+  normal
+}
+
+enum IndicatorStatus {
+  pending
+  in_progress
+  completed
+}
+
+// 账号表
+model Account {
+  id          Int          @id @default(autoincrement())
+  projectId   Int?         @map("project_id")
+  platform    Platform
+  accountName String       @map("account_name") @db.VarChar(100)
+  accountId   String?      @map("account_id") @db.VarChar(100)
+  followers   Int          @default(0)
+  operatorId  Int?         @map("operator_id")
+  status      Int          @default(1) @db.TinyInt
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  project     Project?     @relation(fields: [projectId], references: [id])
+  operator    User?        @relation("AccountOperator", fields: [operatorId], references: [id])
+  trafficData TrafficData[]
+
+  @@map("accounts")
+}
+
+enum Platform {
+  douyin
+  kuaishou
+  xiaohongshu
+  shipinhao
+}
+
+// 流量数据表
+model TrafficData {
+  id             Int      @id @default(autoincrement())
+  accountId      Int      @map("account_id")
+  contentTitle   String?  @map("content_title") @db.VarChar(255)
+  publishDate    DateTime? @map("publish_date") @db.Date
+  views          Int      @default(0)
+  likes          Int      @default(0)
+  comments       Int      @default(0)
+  shares         Int      @default(0)
+  saves          Int      @default(0)
+  completionRate Decimal? @map("completion_rate") @db.Decimal(5, 2)
+  importBatch    String?  @map("import_batch") @db.VarChar(50)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  account        Account  @relation(fields: [accountId], references: [id])
+
+  @@index([publishDate], name: "idx_publish_date")
+  @@index([accountId, publishDate], name: "idx_account_date")
+  @@map("traffic_data")
+}
+
+// 线索表
+model Lead {
+  id             Int            @id @default(autoincrement())
+  projectId      Int?           @map("project_id")
+  customerName   String?        @map("customer_name") @db.VarChar(100)
+  phone          String?        @db.VarChar(20)
+  wechat         String?        @db.VarChar(50)
+  sourcePlatform SourcePlatform @map("source_platform")
+  sourceType     SourceType     @map("source_type")
+  assignedTo     Int?           @map("assigned_to")
+  status         LeadStatus     @default(pending)
+  amount         Decimal        @default(0) @db.Decimal(15, 2)
+  remark         String?        @db.Text
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  project        Project?       @relation(fields: [projectId], references: [id])
+  assignee       User?          @relation("LeadAssignee", fields: [assignedTo], references: [id])
+  logs           LeadLog[]
+
+  @@index([status], name: "idx_status")
+  @@index([assignedTo], name: "idx_assigned")
+  @@map("leads")
+}
+
+enum SourcePlatform {
+  douyin
+  kuaishou
+  xiaohongshu
+  shipinhao
+  wechat
+  other
+}
+
+enum SourceType {
+  private_message
+  to_wechat
+  first_sale
+  repeat_sale
+}
+
+enum LeadStatus {
+  pending
+  following
+  converted
+  lost
+  hold
+}
+
+// 线索跟进记录表
+model LeadLog {
+  id        Int      @id @default(autoincrement())
+  leadId    Int      @map("lead_id")
+  userId    Int      @map("user_id")
+  action    String?  @db.VarChar(50)
+  content   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([leadId], name: "idx_lead")
+  @@map("lead_logs")
+}
+
+// 数据导入记录表
+model ImportRecord {
+  id          Int          @id @default(autoincrement())
+  type        ImportType
+  fileName    String?      @map("file_name") @db.VarChar(255)
+  batchNo     String?      @map("batch_no") @db.VarChar(50)
+  totalRows   Int          @default(0) @map("total_rows")
+  successRows Int          @default(0) @map("success_rows")
+  failedRows  Int          @default(0) @map("failed_rows")
+  status      ImportStatus @default(pending)
+  errorLog    String?      @map("error_log") @db.Text
+  createdBy   Int?         @map("created_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  creator     User?        @relation(fields: [createdBy], references: [id])
+
+  @@map("import_records")
+}
+
+enum ImportType {
+  traffic
+  lead
+}
+
+enum ImportStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+// AI 分析记录表
+model AiAnalysis {
+  id         Int          @id @default(autoincrement())
+  type       AnalysisType
+  targetType String?      @map("target_type") @db.VarChar(50)
+  targetId   Int?         @map("target_id")
+  inputData  Json?        @map("input_data")
+  result     String?      @db.Text
+  createdBy  Int?         @map("created_by")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  creator    User?        @relation(fields: [createdBy], references: [id])
+
+  @@index([targetType, targetId], name: "idx_target")
+  @@map("ai_analyses")
+}
+
+enum AnalysisType {
+  traffic_diagnosis
+  content_suggestion
+  sales_advice
+  performance
+  project_review
+  leader_report
+}
+
+// 项目预警表
+model ProjectWarning {
+  id          Int           @id @default(autoincrement())
+  projectId   Int           @map("project_id")
+  type        WarningType
+  level       WarningLevel
+  title       String        @db.VarChar(200)
+  description String?       @db.Text
+  isResolved  Boolean       @default(false) @map("is_resolved")
+  resolvedAt  DateTime?     @map("resolved_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  project     Project       @relation(fields: [projectId], references: [id])
+
+  @@map("project_warnings")
+}
+
+enum WarningType {
+  deadline
+  indicator
+  stage
+}
+
+enum WarningLevel {
+  yellow
+  red
+  urgent
+}
+
+// 项目评论/反馈表
+model ProjectComment {
+  id          Int      @id @default(autoincrement())
+  projectId   Int      @map("project_id")
+  userId      Int?     @map("user_id")
+  content     String   @db.Text
+  isAnonymous Boolean  @default(false) @map("is_anonymous")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  project     Project  @relation(fields: [projectId], references: [id])
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@map("project_comments")
+}
+
+// 匿名反馈表
+model Feedback {
+  id          Int            @id @default(autoincrement())
+  userId      Int?           @map("user_id")
+  category    FeedbackCategory
+  title       String         @db.VarChar(200)
+  content     String         @db.Text
+  isAnonymous Boolean        @default(true) @map("is_anonymous")
+  status      FeedbackStatus @default(pending)
+  reply       String?        @db.Text
+  repliedAt   DateTime?      @map("replied_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  user        User?          @relation(fields: [userId], references: [id])
+
+  @@map("feedbacks")
+}
+
+enum FeedbackCategory {
+  suggestion
+  complaint
+  question
+  other
+}
+
+enum FeedbackStatus {
+  pending
+  processing
+  resolved
+  closed
+}
+
+// 日报表
+model DailyReport {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  reportDate  DateTime @map("report_date") @db.Date
+  todayWork   String   @map("today_work") @db.Text
+  tomorrowPlan String? @map("tomorrow_plan") @db.Text
+  problems    String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, reportDate])
+  @@map("daily_reports")
+}
+
+// 周报表
+model WeeklyReport {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  weekStart   DateTime @map("week_start") @db.Date
+  weekEnd     DateTime @map("week_end") @db.Date
+  summary     String   @db.Text
+  achievements String? @db.Text
+  nextWeekPlan String? @map("next_week_plan") @db.Text
+  problems    String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, weekStart])
+  @@map("weekly_reports")
+}
+
+// 月报表
+model MonthlyReport {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  reportMonth   DateTime @map("report_month") @db.Date
+  summary       String   @db.Text
+  achievements  String?  @db.Text
+  kpiCompletion Json?    @map("kpi_completion")
+  nextMonthPlan String?  @map("next_month_plan") @db.Text
+  problems      String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, reportMonth])
+  @@map("monthly_reports")
+}
+
+// 企业文化-公告表
+model Announcement {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  content     String   @db.Text
+  isTop       Boolean  @default(false) @map("is_top")
+  publishedAt DateTime @default(now()) @map("published_at")
+  expiredAt   DateTime? @map("expired_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("announcements")
+}
+
+// 企业文化-荣誉墙
+model Honor {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  description String?  @db.Text
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  honorDate   DateTime @map("honor_date") @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("honors")
+}
+
+// 官网内容管理-Banner
+model WebsiteBanner {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  imageUrl    String   @map("image_url") @db.VarChar(500)
+  linkUrl     String?  @map("link_url") @db.VarChar(500)
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("website_banners")
+}
+
+// 官网内容管理-案例
+model WebsiteCase {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  description String?  @db.Text
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  content     String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("website_cases")
+}
+
+// 官网内容管理-公司信息
+model WebsiteInfo {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique @db.VarChar(50)
+  value       String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("website_info")
+}
