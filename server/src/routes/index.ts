@@ -53,7 +53,7 @@ router.get('/health', (req, res) => {
 // P0 核心模块
 import authRoutes from './auth.routes';
 import userRoutes from './user.routes';
-// import projectRoutes from './project.routes';
+import projectRoutes from './project.routes';
 
 // P1 数据采集模块
 // import accountRoutes from './account.routes';
@@ -87,7 +87,7 @@ import userRoutes from './user.routes';
 // P0 核心模块
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
-// router.use('/projects', projectRoutes);
+router.use('/projects', projectRoutes);
 
 // P1 数据采集模块
 // router.use('/accounts', accountRoutes);
