@@ -39,6 +39,23 @@ model User {
   feedbacks        Feedback[]
   projectComments  ProjectComment[]
 
+  // 新增关联关系
+  assignedCustomers   Customer[]         @relation("CustomerAssignee")
+  customerFollowLogs  CustomerFollowLog[] @relation("CustomerFollower")
+  salesOrders         Order[]            @relation("OrderSales")
+  createdPayments     Payment[]          @relation("PaymentCreator")
+  appliedExpenses     Expense[]          @relation("ExpenseApplicant")
+  approvedExpenses    Expense[]          @relation("ExpenseApprover")
+  createdBudgets      Budget[]           @relation("BudgetCreator")
+  assignedTasks       Task[]             @relation("TaskAssignee")
+  assignerTasks       Task[]             @relation("TaskAssigner")
+  taskComments        TaskComment[]      @relation("TaskCommenter")
+  assignedContents    ContentSchedule[]  @relation("ContentAssignee")
+  uploadedMaterials   Material[]         @relation("MaterialUploader")
+  createdScripts      ScriptTemplate[]   @relation("ScriptCreator")
+  createdAutomations  AutomationRule[]   @relation("AutomationCreator")
+  notifications       Notification[]     @relation("NotificationReceiver")
+
   @@map("users")
 }
 
@@ -74,6 +91,13 @@ model Project {
   stages      ProjectStage[]
   warnings    ProjectWarning[]
   comments    ProjectComment[]
+
+  // 新增关联关系
+  orders           Order[]
+  expenses         Expense[]
+  budgets          Budget[]
+  tasks            Task[]
+  contentSchedules ContentSchedule[]
 
   @@map("projects")
 }
@@ -192,6 +216,7 @@ model Account {
   project     Project?     @relation(fields: [projectId], references: [id])
   operator    User?        @relation("AccountOperator", fields: [operatorId], references: [id])
   trafficData TrafficData[]
+  contentSchedules ContentSchedule[]
 
   @@map("accounts")
 }
@@ -541,4 +566,484 @@ model WebsiteInfo {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("website_info")
+}
+
+// ==================== 新增功能模块 ====================
+
+// 客户表
+model Customer {
+  id             Int              @id @default(autoincrement())
+  name           String           @db.VarChar(100)
+  phone          String?          @db.VarChar(20)
+  wechat         String?          @db.VarChar(50)
+  email          String?          @db.VarChar(100)
+  company        String?          @db.VarChar(200)
+  address        String?          @db.VarChar(500)
+  source         SourcePlatform?  // 来源渠道
+  level          CustomerLevel    @default(normal) // 客户等级
+  assignedTo     Int?             @map("assigned_to")
+  totalAmount    Decimal          @default(0) @map("total_amount") @db.Decimal(15, 2) // 累计成交金额
+  orderCount     Int              @default(0) @map("order_count") // 成交次数
+  lastContactAt  DateTime?        @map("last_contact_at") // 最后联系时间
+  remark         String?          @db.Text
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  assignee       User?            @relation("CustomerAssignee", fields: [assignedTo], references: [id])
+  tags           CustomerTagRelation[]
+  orders         Order[]
+  followLogs     CustomerFollowLog[]
+
+  @@index([assignedTo], name: "idx_customer_assigned")
+  @@index([level], name: "idx_customer_level")
+  @@map("customers")
+}
+
+enum CustomerLevel {
+  vip        // VIP客户
+  important  // 重要客户
+  normal     // 普通客户
+  potential  // 潜在客户
+}
+
+// 客户标签表
+model CustomerTag {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(50)
+  color       String?  @db.VarChar(20) // 标签颜色
+  category    String?  @db.VarChar(50) // 标签分类（行业、需求、偏好等）
+  description String?  @db.VarChar(200)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  customers   CustomerTagRelation[]
+
+  @@map("customer_tags")
+}
+
+// 客户标签关联表
+model CustomerTagRelation {
+  id         Int      @id @default(autoincrement())
+  customerId Int      @map("customer_id")
+  tagId      Int      @map("tag_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  tag        CustomerTag @relation(fields: [tagId], references: [id])
+
+  @@unique([customerId, tagId])
+  @@map("customer_tag_relations")
+}
+
+// 客户跟进记录表
+model CustomerFollowLog {
+  id         Int      @id @default(autoincrement())
+  customerId Int      @map("customer_id")
+  userId     Int      @map("user_id")
+  type       FollowType @default(other)
+  content    String   @db.Text
+  nextFollowAt DateTime? @map("next_follow_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  customer   Customer @relation(fields: [customerId], references: [id])
+  user       User     @relation("CustomerFollower", fields: [userId], references: [id])
+
+  @@index([customerId], name: "idx_follow_customer")
+  @@map("customer_follow_logs")
+}
+
+enum FollowType {
+  call      // 电话
+  wechat    // 微信
+  meeting   // 面谈
+  email     // 邮件
+  other     // 其他
+}
+
+// 订单表（收入管理）
+model Order {
+  id             Int           @id @default(autoincrement())
+  orderNo        String        @unique @map("order_no") @db.VarChar(50) // 订单编号
+  projectId      Int?          @map("project_id")
+  customerId     Int?          @map("customer_id")
+  leadId         Int?          @map("lead_id") // 关联线索
+  productName    String        @map("product_name") @db.VarChar(200) // 产品/服务名称
+  amount         Decimal       @db.Decimal(15, 2) // 订单金额
+  paidAmount     Decimal       @default(0) @map("paid_amount") @db.Decimal(15, 2) // 已回款金额
+  paymentStatus  PaymentStatus @default(unpaid) @map("payment_status") // 回款状态
+  salesId        Int?          @map("sales_id") // 销售人员
+  commissionRate Decimal?      @map("commission_rate") @db.Decimal(5, 2) // 提成比例 %
+  commissionAmount Decimal?    @map("commission_amount") @db.Decimal(15, 2) // 提成金额
+  signedAt       DateTime?     @map("signed_at") // 签约日期
+  deliveredAt    DateTime?     @map("delivered_at") // 交付日期
+  status         OrderStatus   @default(pending)
+  remark         String?       @db.Text
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  project        Project?      @relation(fields: [projectId], references: [id])
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  sales          User?         @relation("OrderSales", fields: [salesId], references: [id])
+  payments       Payment[]
+
+  @@index([paymentStatus], name: "idx_order_payment_status")
+  @@index([salesId], name: "idx_order_sales")
+  @@index([signedAt], name: "idx_order_signed")
+  @@map("orders")
+}
+
+enum PaymentStatus {
+  unpaid      // 未回款
+  partial     // 部分回款
+  paid        // 已回款
+}
+
+enum OrderStatus {
+  pending     // 待处理
+  confirmed   // 已确认
+  processing  // 进行中
+  delivered   // 已交付
+  completed   // 已完成
+  cancelled   // 已取消
+}
+
+// 回款记录表
+model Payment {
+  id          Int           @id @default(autoincrement())
+  orderId     Int           @map("order_id")
+  amount      Decimal       @db.Decimal(15, 2)
+  paymentMethod PaymentMethod @default(transfer) @map("payment_method")
+  paidAt      DateTime      @map("paid_at")
+  remark      String?       @db.VarChar(500)
+  createdBy   Int?          @map("created_by")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  order       Order         @relation(fields: [orderId], references: [id])
+  creator     User?         @relation("PaymentCreator", fields: [createdBy], references: [id])
+
+  @@index([orderId], name: "idx_payment_order")
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  transfer    // 银行转账
+  alipay      // 支付宝
+  wechat      // 微信
+  cash        // 现金
+  other       // 其他
+}
+
+// 支出表
+model Expense {
+  id          Int           @id @default(autoincrement())
+  projectId   Int?          @map("project_id")
+  category    ExpenseCategory
+  subCategory String?       @map("sub_category") @db.VarChar(50)
+  amount      Decimal       @db.Decimal(15, 2)
+  description String        @db.VarChar(500)
+  expenseDate DateTime      @map("expense_date") @db.Date
+  attachments Json?         // 附件URL列表
+  applicantId Int?          @map("applicant_id") // 申请人
+  approverId  Int?          @map("approver_id")  // 审批人
+  status      ExpenseStatus @default(pending)
+  approvedAt  DateTime?     @map("approved_at")
+  remark      String?       @db.Text
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  project     Project?      @relation(fields: [projectId], references: [id])
+  applicant   User?         @relation("ExpenseApplicant", fields: [applicantId], references: [id])
+  approver    User?         @relation("ExpenseApprover", fields: [approverId], references: [id])
+
+  @@index([category], name: "idx_expense_category")
+  @@index([expenseDate], name: "idx_expense_date")
+  @@map("expenses")
+}
+
+enum ExpenseCategory {
+  ad_cost         // 广告投放
+  platform_fee    // 平台费用
+  labor_cost      // 人工成本
+  equipment       // 设备采购
+  office          // 办公费用
+  travel          // 差旅费用
+  marketing       // 市场推广
+  other           // 其他
+}
+
+enum ExpenseStatus {
+  pending    // 待审批
+  approved   // 已批准
+  rejected   // 已拒绝
+  paid       // 已支付
+}
+
+// 预算表
+model Budget {
+  id          Int           @id @default(autoincrement())
+  projectId   Int?          @map("project_id")
+  category    ExpenseCategory
+  name        String        @db.VarChar(100)
+  plannedAmount Decimal     @map("planned_amount") @db.Decimal(15, 2) // 计划金额
+  usedAmount  Decimal       @default(0) @map("used_amount") @db.Decimal(15, 2) // 已使用金额
+  startDate   DateTime      @map("start_date") @db.Date
+  endDate     DateTime      @map("end_date") @db.Date
+  alertRate   Decimal       @default(80) @map("alert_rate") @db.Decimal(5, 2) // 预警百分比
+  status      BudgetStatus  @default(active)
+  createdBy   Int?          @map("created_by")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  project     Project?      @relation(fields: [projectId], references: [id])
+  creator     User?         @relation("BudgetCreator", fields: [createdBy], references: [id])
+
+  @@map("budgets")
+}
+
+enum BudgetStatus {
+  active     // 进行中
+  completed  // 已完成
+  exceeded   // 已超支
+  cancelled  // 已取消
+}
+
+// 任务表
+model Task {
+  id          Int        @id @default(autoincrement())
+  projectId   Int?       @map("project_id")
+  title       String     @db.VarChar(200)
+  description String?    @db.Text
+  priority    TaskPriority @default(normal)
+  assigneeId  Int?       @map("assignee_id") // 执行人
+  assignerId  Int?       @map("assigner_id") // 指派人
+  status      TaskStatus @default(pending)
+  dueDate     DateTime?  @map("due_date")
+  completedAt DateTime?  @map("completed_at")
+  parentId    Int?       @map("parent_id") // 父任务ID，支持子任务
+  attachments Json?      // 附件
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  project     Project?   @relation(fields: [projectId], references: [id])
+  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assigner    User?      @relation("TaskAssigner", fields: [assignerId], references: [id])
+  parent      Task?      @relation("SubTasks", fields: [parentId], references: [id])
+  subTasks    Task[]     @relation("SubTasks")
+  comments    TaskComment[]
+
+  @@index([assigneeId], name: "idx_task_assignee")
+  @@index([status], name: "idx_task_status")
+  @@index([dueDate], name: "idx_task_due")
+  @@map("tasks")
+}
+
+enum TaskPriority {
+  urgent    // 紧急
+  high      // 高
+  normal    // 普通
+  low       // 低
+}
+
+enum TaskStatus {
+  pending      // 待处理
+  in_progress  // 进行中
+  completed    // 已完成
+  cancelled    // 已取消
+}
+
+// 任务评论表
+model TaskComment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int      @map("task_id")
+  userId    Int      @map("user_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task      Task     @relation(fields: [taskId], references: [id])
+  user      User     @relation("TaskCommenter", fields: [userId], references: [id])
+
+  @@map("task_comments")
+}
+
+// 内容排期表
+model ContentSchedule {
+  id          Int               @id @default(autoincrement())
+  projectId   Int?              @map("project_id")
+  accountId   Int?              @map("account_id")
+  title       String            @db.VarChar(200)
+  contentType ContentType       @map("content_type")
+  description String?           @db.Text
+  scheduledAt DateTime          @map("scheduled_at") // 计划发布时间
+  publishedAt DateTime?         @map("published_at") // 实际发布时间
+  status      ContentStatus     @default(draft)
+  assigneeId  Int?              @map("assignee_id")
+  materialIds Json?             @map("material_ids") // 关联素材ID列表
+  trafficDataId Int?            @map("traffic_data_id") // 关联流量数据
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  project     Project?          @relation(fields: [projectId], references: [id])
+  account     Account?          @relation(fields: [accountId], references: [id])
+  assignee    User?             @relation("ContentAssignee", fields: [assigneeId], references: [id])
+
+  @@index([scheduledAt], name: "idx_content_scheduled")
+  @@index([status], name: "idx_content_status")
+  @@map("content_schedules")
+}
+
+enum ContentType {
+  video       // 视频
+  image       // 图文
+  article     // 文章
+  live        // 直播
+  short_video // 短视频
+}
+
+enum ContentStatus {
+  draft       // 草稿
+  scheduled   // 已排期
+  published   // 已发布
+  cancelled   // 已取消
+}
+
+// 素材库表
+model Material {
+  id          Int            @id @default(autoincrement())
+  name        String         @db.VarChar(200)
+  type        MaterialType
+  category    String?        @db.VarChar(50) // 素材分类
+  fileUrl     String         @map("file_url") @db.VarChar(500)
+  thumbnailUrl String?       @map("thumbnail_url") @db.VarChar(500)
+  fileSize    Int?           @map("file_size") // 文件大小（字节）
+  duration    Int?           // 视频时长（秒）
+  tags        Json?          // 标签列表
+  description String?        @db.VarChar(500)
+  usageCount  Int            @default(0) @map("usage_count") // 使用次数
+  uploadedBy  Int?           @map("uploaded_by")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  uploader    User?          @relation("MaterialUploader", fields: [uploadedBy], references: [id])
+
+  @@index([type], name: "idx_material_type")
+  @@index([category], name: "idx_material_category")
+  @@map("materials")
+}
+
+enum MaterialType {
+  video       // 视频
+  image       // 图片
+  audio       // 音频
+  document    // 文档
+  template    // 模板
+}
+
+// 话术模板库
+model ScriptTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  category    String   @db.VarChar(50) // 分类：开场白、产品介绍、异议处理、成交话术等
+  scenario    String?  @db.VarChar(100) // 适用场景
+  content     String   @db.Text
+  tags        Json?    // 标签
+  usageCount  Int      @default(0) @map("usage_count")
+  rating      Decimal? @db.Decimal(3, 2) // 平均评分
+  createdBy   Int?     @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  creator     User?    @relation("ScriptCreator", fields: [createdBy], references: [id])
+
+  @@index([category], name: "idx_script_category")
+  @@map("script_templates")
+}
+
+// 自动化规则表
+model AutomationRule {
+  id          Int               @id @default(autoincrement())
+  name        String            @db.VarChar(100)
+  description String?           @db.VarChar(500)
+  triggerType TriggerType       @map("trigger_type")
+  triggerConfig Json            @map("trigger_config") // 触发条件配置
+  actionType  ActionType        @map("action_type")
+  actionConfig Json             @map("action_config") // 执行动作配置
+  isEnabled   Boolean           @default(true) @map("is_enabled")
+  priority    Int               @default(0) // 优先级
+  executionCount Int            @default(0) @map("execution_count") // 执行次数
+  lastExecutedAt DateTime?      @map("last_executed_at")
+  createdBy   Int?              @map("created_by")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  creator     User?             @relation("AutomationCreator", fields: [createdBy], references: [id])
+  logs        AutomationLog[]
+
+  @@map("automation_rules")
+}
+
+enum TriggerType {
+  schedule    // 定时触发
+  event       // 事件触发
+  condition   // 条件触发
+}
+
+enum ActionType {
+  notification    // 发送通知
+  task_create     // 创建任务
+  task_assign     // 分配任务
+  report_generate // 生成报告
+  data_sync       // 数据同步
+  alert           // 告警
+}
+
+// 自动化执行日志
+model AutomationLog {
+  id          Int      @id @default(autoincrement())
+  ruleId      Int      @map("rule_id")
+  status      AutomationLogStatus @default(success)
+  inputData   Json?    @map("input_data")
+  outputData  Json?    @map("output_data")
+  errorMessage String? @map("error_message") @db.Text
+  executedAt  DateTime @default(now()) @map("executed_at")
+
+  rule        AutomationRule @relation(fields: [ruleId], references: [id])
+
+  @@index([ruleId], name: "idx_automation_log_rule")
+  @@map("automation_logs")
+}
+
+enum AutomationLogStatus {
+  success
+  failed
+  skipped
+}
+
+// 通知表
+model Notification {
+  id          Int              @id @default(autoincrement())
+  userId      Int              @map("user_id")
+  type        NotificationType
+  title       String           @db.VarChar(200)
+  content     String           @db.Text
+  relatedType String?          @map("related_type") @db.VarChar(50) // 关联对象类型
+  relatedId   Int?             @map("related_id") // 关联对象ID
+  isRead      Boolean          @default(false) @map("is_read")
+  readAt      DateTime?        @map("read_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user        User             @relation("NotificationReceiver", fields: [userId], references: [id])
+
+  @@index([userId, isRead], name: "idx_notification_user_read")
+  @@index([createdAt], name: "idx_notification_created")
+  @@map("notifications")
+}
+
+enum NotificationType {
+  system       // 系统通知
+  task         // 任务通知
+  lead         // 线索提醒
+  payment      // 回款提醒
+  report       // 报告推送
+  warning      // 预警通知
+  announcement // 公告通知
 }
