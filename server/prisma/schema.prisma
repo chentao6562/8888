@@ -93,6 +93,7 @@ model Project {
   comments    ProjectComment[]
 
   // 新增关联关系
+  customers        Customer[]
   orders           Order[]
   expenses         Expense[]
   budgets          Budget[]
@@ -234,6 +235,7 @@ enum Platform {
 model TrafficData {
   id             Int      @id @default(autoincrement())
   accountId      Int      @map("account_id")
+  leadId         Int?     @map("lead_id") // 关联的线索（该内容产生的线索）
   contentTitle   String?  @map("content_title") @db.VarChar(500)
   contentType    String?  @map("content_type") @db.VarChar(20) // 视频/图文
   contentUrl     String?  @map("content_url") @db.Text // 内容链接
@@ -250,9 +252,11 @@ model TrafficData {
   createdAt      DateTime @default(now()) @map("created_at")
 
   account        Account  @relation(fields: [accountId], references: [id])
+  lead           Lead?    @relation(fields: [leadId], references: [id])
 
   @@index([publishDate], name: "idx_publish_date")
   @@index([accountId, publishDate], name: "idx_account_date")
+  @@index([leadId], name: "idx_traffic_lead")
   @@map("traffic_data")
 }
 
@@ -275,6 +279,8 @@ model Lead {
   project        Project?       @relation(fields: [projectId], references: [id])
   assignee       User?          @relation("LeadAssignee", fields: [assignedTo], references: [id])
   logs           LeadLog[]
+  convertedCustomer Customer?   // 转化后的客户（一对一反向关联）
+  trafficData    TrafficData[]  // 关联的流量数据
 
   @@index([status], name: "idx_status")
   @@index([assignedTo], name: "idx_assigned")
@@ -579,6 +585,8 @@ model WebsiteInfo {
 // 客户表
 model Customer {
   id             Int              @id @default(autoincrement())
+  projectId      Int?             @map("project_id") // 所属项目
+  leadId         Int?             @unique @map("lead_id") // 来源线索（一对一）
   name           String           @db.VarChar(100)
   phone          String?          @db.VarChar(20)
   wechat         String?          @db.VarChar(50)
@@ -595,11 +603,14 @@ model Customer {
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
+  project        Project?         @relation(fields: [projectId], references: [id])
+  lead           Lead?            @relation(fields: [leadId], references: [id])
   assignee       User?            @relation("CustomerAssignee", fields: [assignedTo], references: [id])
   tags           CustomerTagRelation[]
   orders         Order[]
   followLogs     CustomerFollowLog[]
 
+  @@index([projectId], name: "idx_customer_project")
   @@index([assignedTo], name: "idx_customer_assigned")
   @@index([level], name: "idx_customer_level")
   @@map("customers")
