@@ -61,6 +61,25 @@ export const uploadExcel = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 }).single('file');
 
+// CSV 文件过滤
+const csvFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedTypes = ['text/csv', 'application/vnd.ms-excel'];
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (allowedTypes.includes(file.mimetype) || ext === '.csv') {
+    cb(null, true);
+  } else {
+    cb(new Error('只支持 CSV 文件'));
+  }
+};
+
+// CSV 上传（支持更大文件）
+export const uploadCSV = multer({
+  storage: memoryStorage,
+  fileFilter: csvFilter,
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+}).single('file');
+
 // 素材上传
 export const uploadMaterial = multer({
   storage: diskStorage,

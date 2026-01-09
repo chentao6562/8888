@@ -13,6 +13,19 @@ import {
   ImportRecordDto
 } from '../types/dto/traffic.dto';
 import * as XLSX from 'xlsx';
+import * as iconv from 'iconv-lite';
+
+// 平台名称映射
+const PLATFORM_MAP: Record<string, 'douyin' | 'kuaishou' | 'xiaohongshu' | 'shipinhao'> = {
+  '抖音': 'douyin',
+  '快手': 'kuaishou',
+  '小红书': 'xiaohongshu',
+  '视频号': 'shipinhao',
+  'douyin': 'douyin',
+  'kuaishou': 'kuaishou',
+  'xiaohongshu': 'xiaohongshu',
+  'shipinhao': 'shipinhao'
+};
 
 export class TrafficService {
   async findAll(params: TrafficQueryDto): Promise<PaginatedResult<TrafficDataDto>> {
@@ -214,6 +227,226 @@ export class TrafficService {
       items,
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }
     };
+  }
+
+  /**
+   * 智能CSV导入 - 支持自动创建账号和匹配项目
+   * CSV格式：账号,备注,平台,标题,类型,推荐,阅读（播放）,评论,分享,收藏,点赞,发布时间,链接
+   */
+  async importFromCSV(
+    file: Express.Multer.File,
+    projectId: number | null,
+    userId: number
+  ): Promise<ImportResultDto> {
+    // 解析CSV（支持GBK编码）
+    let content: string;
+    try {
+      // 尝试UTF-8解码
+      content = file.buffer.toString('utf-8');
+      // 如果出现乱码，尝试GBK
+      if (content.includes('�')) {
+        content = iconv.decode(file.buffer, 'gbk');
+      }
+    } catch {
+      content = iconv.decode(file.buffer, 'gbk');
+    }
+
+    // 解析CSV行
+    const lines = content.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      throw new BadRequestError('CSV文件为空或格式不正确');
+    }
+
+    // 解析表头
+    const headers = this.parseCSVLine(lines[0]);
+    console.log('CSV Headers:', headers);
+
+    // 字段索引映射
+    const fieldMap = {
+      accountName: this.findHeaderIndex(headers, ['账号', '账户', 'account']),
+      remark: this.findHeaderIndex(headers, ['备注', 'remark', 'note']),
+      platform: this.findHeaderIndex(headers, ['平台', 'platform']),
+      title: this.findHeaderIndex(headers, ['标题', 'title', '内容']),
+      contentType: this.findHeaderIndex(headers, ['类型', 'type', '内容类型']),
+      recommends: this.findHeaderIndex(headers, ['推荐', 'recommend']),
+      views: this.findHeaderIndex(headers, ['阅读', '播放', 'views', '阅读（播放）']),
+      comments: this.findHeaderIndex(headers, ['评论', 'comments']),
+      shares: this.findHeaderIndex(headers, ['分享', 'shares', '转发']),
+      saves: this.findHeaderIndex(headers, ['收藏', 'saves']),
+      likes: this.findHeaderIndex(headers, ['点赞', 'likes']),
+      publishTime: this.findHeaderIndex(headers, ['发布时间', 'publish_time', '时间']),
+      url: this.findHeaderIndex(headers, ['链接', 'url', 'link'])
+    };
+
+    console.log('Field mapping:', fieldMap);
+
+    const batchNo = `CSV${Date.now()}`;
+    let successRows = 0;
+    let failedRows = 0;
+    const errors: string[] = [];
+
+    // 账号缓存
+    const accountCache = new Map<string, number>();
+
+    // 处理数据行
+    for (let i = 1; i < lines.length; i++) {
+      try {
+        const values = this.parseCSVLine(lines[i]);
+        if (values.length < 3) continue; // 跳过空行
+
+        const accountName = values[fieldMap.accountName]?.trim();
+        const platformStr = values[fieldMap.platform]?.trim();
+
+        if (!accountName || !platformStr) {
+          errors.push(`行 ${i + 1}: 账号或平台为空`);
+          failedRows++;
+          continue;
+        }
+
+        const platform = PLATFORM_MAP[platformStr];
+        if (!platform) {
+          errors.push(`行 ${i + 1}: 未知平台 "${platformStr}"`);
+          failedRows++;
+          continue;
+        }
+
+        // 获取或创建账号
+        const cacheKey = `${platform}:${accountName}`;
+        let accountId = accountCache.get(cacheKey);
+
+        if (!accountId) {
+          // 查找或创建账号
+          let account = await prisma.account.findFirst({
+            where: { platform, accountName }
+          });
+
+          if (!account) {
+            // 创建新账号
+            account = await prisma.account.create({
+              data: {
+                platform,
+                accountName,
+                remark: values[fieldMap.remark]?.trim() || null,
+                projectId: projectId
+              }
+            });
+            console.log(`Created new account: ${accountName} (${platform})`);
+          }
+
+          accountId = account.id;
+          accountCache.set(cacheKey, accountId);
+        }
+
+        // 解析发布时间
+        let publishDate: Date | null = null;
+        let publishTime: Date | null = null;
+        const publishTimeStr = values[fieldMap.publishTime]?.trim();
+        if (publishTimeStr) {
+          try {
+            publishTime = new Date(publishTimeStr);
+            if (!isNaN(publishTime.getTime())) {
+              publishDate = new Date(publishTime.toISOString().split('T')[0]);
+            }
+          } catch {
+            // 忽略日期解析错误
+          }
+        }
+
+        // 解析推荐量
+        let recommends: number | null = null;
+        const recommendsStr = values[fieldMap.recommends]?.trim();
+        if (recommendsStr && recommendsStr !== '--' && recommendsStr !== '-') {
+          recommends = parseInt(recommendsStr, 10) || null;
+        }
+
+        // 创建流量数据
+        await prisma.trafficData.create({
+          data: {
+            accountId,
+            contentTitle: values[fieldMap.title]?.trim() || null,
+            contentType: values[fieldMap.contentType]?.trim() || null,
+            contentUrl: values[fieldMap.url]?.trim() || null,
+            publishDate,
+            publishTime,
+            views: parseInt(values[fieldMap.views]?.trim() || '0', 10) || 0,
+            likes: parseInt(values[fieldMap.likes]?.trim() || '0', 10) || 0,
+            comments: parseInt(values[fieldMap.comments]?.trim() || '0', 10) || 0,
+            shares: parseInt(values[fieldMap.shares]?.trim() || '0', 10) || 0,
+            saves: parseInt(values[fieldMap.saves]?.trim() || '0', 10) || 0,
+            recommends,
+            importBatch: batchNo
+          }
+        });
+        successRows++;
+      } catch (err: any) {
+        failedRows++;
+        errors.push(`行 ${i + 1}: ${err.message}`);
+        console.error(`Row ${i + 1} error:`, err);
+      }
+    }
+
+    // 保存导入记录
+    await prisma.importRecord.create({
+      data: {
+        type: 'traffic',
+        fileName: file.originalname,
+        batchNo,
+        totalRows: lines.length - 1,
+        successRows,
+        failedRows,
+        status: 'completed',
+        errorLog: errors.length > 0 ? errors.slice(0, 100).join('\n') : null,
+        createdBy: userId
+      }
+    });
+
+    return {
+      batchNo,
+      totalRows: lines.length - 1,
+      successRows,
+      failedRows,
+      errors: errors.slice(0, 10)
+    };
+  }
+
+  /**
+   * 解析CSV行，处理引号包裹的字段
+   */
+  private parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+
+    return result.map(s => s.trim());
+  }
+
+  /**
+   * 查找表头索引
+   */
+  private findHeaderIndex(headers: string[], candidates: string[]): number {
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i].toLowerCase().trim();
+      for (const candidate of candidates) {
+        if (header.includes(candidate.toLowerCase())) {
+          return i;
+        }
+      }
+    }
+    return -1;
   }
 }
 

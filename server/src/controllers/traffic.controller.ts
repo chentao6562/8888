@@ -54,6 +54,18 @@ export const importTrafficData = catchAsync(async (req: AuthRequest, res: Respon
   return success(res, result, `导入完成：成功 ${result.successRows} 条，失败 ${result.failedRows} 条`);
 });
 
+/**
+ * 智能CSV导入 - 自动识别账号和平台
+ */
+export const importCSV = catchAsync(async (req: AuthRequest, res: Response) => {
+  if (!req.file) return badRequest(res, '请上传CSV文件');
+
+  const projectId = req.body.projectId ? Number(req.body.projectId) : null;
+
+  const result = await trafficService.importFromCSV(req.file, projectId, req.user!.userId);
+  return success(res, result, `导入完成：成功 ${result.successRows} 条，失败 ${result.failedRows} 条`);
+});
+
 export const getImportRecords = catchAsync(async (req: AuthRequest, res: Response) => {
   const query = {
     page: req.query.page ? Number(req.query.page) : 1,
