@@ -3,3 +3,6 @@
  */
 
 export * from './common';
+
+// DTOs
+export * from './dto/auth.dto';
