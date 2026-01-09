@@ -29,15 +29,24 @@ const userStore = useUserStore()
 
 const isCollapsed = ref(false)
 
-// 菜单项
+// 菜单项 - 以项目为中心的结构
 const menuItems = computed(() => {
   const items = [
     { path: '/dashboard', title: '工作台', icon: HomeFilled },
-    { path: '/users', title: '用户管理', icon: User, roles: ['admin', 'manager'] },
-    { path: '/projects', title: '项目管理', icon: Folder },
-    { path: '/customers', title: '客户管理', icon: UserFilled },
-    { path: '/leads', title: '线索管理', icon: Connection },
-    { path: '/orders', title: '订单管理', icon: ShoppingCart },
+    {
+      path: '/projects',
+      title: '项目管理',
+      icon: Folder,
+      children: [
+        { path: '/projects', title: '项目列表' },
+        { path: '/projects/accounts', title: '账号管理' },
+        { path: '/projects/videos', title: '视频管理' },
+        { path: '/projects/traffic', title: '流量看板' },
+        { path: '/projects/leads', title: '线索管理' },
+        { path: '/projects/customers', title: '客户管理' },
+        { path: '/projects/orders', title: '订单管理' }
+      ]
+    },
     { path: '/tasks', title: '任务管理', icon: List },
     {
       path: '/finance',
@@ -48,11 +57,8 @@ const menuItems = computed(() => {
         { path: '/finance/budgets', title: '预算管理' }
       ]
     },
-    { path: '/accounts', title: '账号管理', icon: Platform },
-    { path: '/content-schedules', title: '内容排期', icon: Calendar },
-    { path: '/materials', title: '素材库', icon: Picture },
-    { path: '/scripts', title: '话术模板', icon: ChatDotRound },
     { path: '/reports', title: '工作报告', icon: Document },
+    { path: '/users', title: '用户管理', icon: User, roles: ['admin', 'manager'] },
     {
       path: '/settings',
       title: '系统设置',

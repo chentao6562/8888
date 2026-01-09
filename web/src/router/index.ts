@@ -24,38 +24,46 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/dashboard/index.vue'),
         meta: { title: '工作台', icon: 'HomeFilled' }
       },
-      // 用户管理
-      {
-        path: 'users',
-        name: 'Users',
-        component: () => import('@/pages/users/index.vue'),
-        meta: { title: '用户管理', icon: 'User', roles: ['admin', 'manager'] }
-      },
-      // 项目管理
+      // 项目管理模块 - 核心模块
       {
         path: 'projects',
         name: 'Projects',
         component: () => import('@/pages/projects/index.vue'),
-        meta: { title: '项目管理', icon: 'Folder' }
+        meta: { title: '项目列表', icon: 'Folder' }
       },
-      // 客户管理
       {
-        path: 'customers',
-        name: 'Customers',
-        component: () => import('@/pages/customers/index.vue'),
-        meta: { title: '客户管理', icon: 'UserFilled' }
+        path: 'projects/accounts',
+        name: 'ProjectAccounts',
+        component: () => import('@/pages/projects/accounts.vue'),
+        meta: { title: '账号管理', icon: 'Platform' }
       },
-      // 线索管理
       {
-        path: 'leads',
-        name: 'Leads',
+        path: 'projects/videos',
+        name: 'ProjectVideos',
+        component: () => import('@/pages/projects/videos.vue'),
+        meta: { title: '视频管理', icon: 'VideoCamera' }
+      },
+      {
+        path: 'projects/traffic',
+        name: 'ProjectTraffic',
+        component: () => import('@/pages/projects/traffic.vue'),
+        meta: { title: '流量看板', icon: 'DataLine' }
+      },
+      {
+        path: 'projects/leads',
+        name: 'ProjectLeads',
         component: () => import('@/pages/leads/index.vue'),
         meta: { title: '线索管理', icon: 'Connection' }
       },
-      // 订单管理
       {
-        path: 'orders',
-        name: 'Orders',
+        path: 'projects/customers',
+        name: 'ProjectCustomers',
+        component: () => import('@/pages/customers/index.vue'),
+        meta: { title: '客户管理', icon: 'UserFilled' }
+      },
+      {
+        path: 'projects/orders',
+        name: 'ProjectOrders',
         component: () => import('@/pages/orders/index.vue'),
         meta: { title: '订单管理', icon: 'ShoppingCart' }
       },
@@ -87,40 +95,19 @@ const routes: RouteRecordRaw[] = [
           }
         ]
       },
-      // 账号管理
-      {
-        path: 'accounts',
-        name: 'Accounts',
-        component: () => import('@/pages/accounts/index.vue'),
-        meta: { title: '账号管理', icon: 'Platform' }
-      },
-      // 内容排期
-      {
-        path: 'content-schedules',
-        name: 'ContentSchedules',
-        component: () => import('@/pages/content-schedules/index.vue'),
-        meta: { title: '内容排期', icon: 'Calendar' }
-      },
-      // 素材库
-      {
-        path: 'materials',
-        name: 'Materials',
-        component: () => import('@/pages/materials/index.vue'),
-        meta: { title: '素材库', icon: 'Picture' }
-      },
-      // 话术模板
-      {
-        path: 'scripts',
-        name: 'Scripts',
-        component: () => import('@/pages/scripts/index.vue'),
-        meta: { title: '话术模板', icon: 'ChatDotRound' }
-      },
       // 工作报告
       {
         path: 'reports',
         name: 'Reports',
         component: () => import('@/pages/reports/index.vue'),
         meta: { title: '工作报告', icon: 'Document' }
+      },
+      // 用户管理
+      {
+        path: 'users',
+        name: 'Users',
+        component: () => import('@/pages/users/index.vue'),
+        meta: { title: '用户管理', icon: 'User', roles: ['admin', 'manager'] }
       },
       // 系统设置
       {
