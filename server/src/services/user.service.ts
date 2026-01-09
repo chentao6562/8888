@@ -11,6 +11,7 @@ import {
   UserQueryDto,
   UserListItemDto
 } from '../types/dto/user.dto';
+import { Prisma, UserRole } from '@prisma/client';
 
 /**
  * 将用户实体转换为列表项 DTO
@@ -52,11 +53,7 @@ export class UserService {
     const { page = 1, pageSize = 20, keyword, role, status } = params;
 
     // 构建查询条件
-    const where: {
-      OR?: Array<{ username?: { contains: string }; name?: { contains: string }; phone?: { contains: string }; email?: { contains: string } }>;
-      role?: string;
-      status?: number;
-    } = {};
+    const where: Prisma.UserWhereInput = {};
 
     if (keyword) {
       where.OR = [
@@ -68,7 +65,8 @@ export class UserService {
     }
 
     if (role) {
-      where.role = role;
+      // 将字符串转换为 UserRole 枚举
+      where.role = role as UserRole;
     }
 
     if (status !== undefined) {
@@ -165,7 +163,7 @@ export class UserService {
         name: data.name,
         phone: data.phone,
         email: data.email,
-        role: data.role,
+        role: data.role as UserRole,
         avatar: data.avatar,
         status: 1
       },
@@ -206,7 +204,7 @@ export class UserService {
         name: data.name,
         phone: data.phone,
         email: data.email,
-        role: data.role,
+        role: data.role as UserRole,
         avatar: data.avatar
       },
       select: {
