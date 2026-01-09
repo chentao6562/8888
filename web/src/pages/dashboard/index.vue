@@ -77,8 +77,10 @@ const formatTime = (time: string) => {
 }
 
 // 获取任务优先级标签
-const getPriorityTag = (priority: string) => {
-  const map: Record<string, { type: string; label: string }> = {
+type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+
+const getPriorityTag = (priority: string): { type: TagType; label: string } => {
+  const map: Record<string, { type: TagType; label: string }> = {
     urgent: { type: 'danger', label: '紧急' },
     high: { type: 'warning', label: '高' },
     normal: { type: 'info', label: '普通' },

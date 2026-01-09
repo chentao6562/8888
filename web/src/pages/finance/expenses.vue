@@ -63,12 +63,14 @@ const statusOptions = [
 
 const projects = ref<{ id: number; name: string }[]>([])
 
+type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+
 const getCategoryLabel = (category: string) => {
   return categoryOptions.find(c => c.value === category)?.label || category
 }
 
-const getStatusTag = (status: string) => {
-  const map: Record<string, { type: string; label: string }> = {
+const getStatusTag = (status: string): { type: TagType; label: string } => {
+  const map: Record<string, { type: TagType; label: string }> = {
     pending: { type: 'warning', label: '待审批' },
     approved: { type: 'primary', label: '已批准' },
     rejected: { type: 'danger', label: '已拒绝' },

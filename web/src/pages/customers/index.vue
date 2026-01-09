@@ -68,8 +68,10 @@ const sourceOptions = [
   { label: '其他', value: 'other' }
 ]
 
-const getLevelTag = (level: string) => {
-  const map: Record<string, { type: string; label: string }> = {
+type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+
+const getLevelTag = (level: string): { type: TagType; label: string } => {
+  const map: Record<string, { type: TagType; label: string }> = {
     normal: { type: 'info', label: '普通' },
     important: { type: 'warning', label: '重要' },
     vip: { type: 'danger', label: 'VIP' }

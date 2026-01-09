@@ -47,8 +47,10 @@ const statusOptions = [
   { label: '已暂停', value: 'paused' }
 ]
 
-const getStatusTag = (status: string) => {
-  const map: Record<string, { type: string; label: string }> = {
+type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+
+const getStatusTag = (status: string): { type: TagType; label: string } => {
+  const map: Record<string, { type: TagType; label: string }> = {
     active: { type: 'primary', label: '进行中' },
     completed: { type: 'success', label: '已完成' },
     paused: { type: 'warning', label: '已暂停' }

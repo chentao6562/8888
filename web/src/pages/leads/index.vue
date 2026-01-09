@@ -71,8 +71,10 @@ const statusOptions = [
   { label: '搁置', value: 'hold' }
 ]
 
-const getStatusTag = (status: string) => {
-  const map: Record<string, { type: string; label: string }> = {
+type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+
+const getStatusTag = (status: string): { type: TagType; label: string } => {
+  const map: Record<string, { type: TagType; label: string }> = {
     pending: { type: 'warning', label: '待跟进' },
     following: { type: 'primary', label: '跟进中' },
     converted: { type: 'success', label: '已转化' },

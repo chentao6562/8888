@@ -63,8 +63,10 @@ const statusOptions = [
 const projects = ref<{ id: number; name: string }[]>([])
 const users = ref<{ id: number; name: string }[]>([])
 
-const getPriorityTag = (priority: string) => {
-  const map: Record<string, { type: string; label: string }> = {
+type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+
+const getPriorityTag = (priority: string): { type: TagType; label: string } => {
+  const map: Record<string, { type: TagType; label: string }> = {
     urgent: { type: 'danger', label: '紧急' },
     high: { type: 'warning', label: '高' },
     normal: { type: 'info', label: '普通' },
@@ -73,8 +75,8 @@ const getPriorityTag = (priority: string) => {
   return map[priority] || { type: 'info', label: priority }
 }
 
-const getStatusTag = (status: string) => {
-  const map: Record<string, { type: string; label: string }> = {
+const getStatusTag = (status: string): { type: TagType; label: string } => {
+  const map: Record<string, { type: TagType; label: string }> = {
     pending: { type: 'warning', label: '待处理' },
     in_progress: { type: 'primary', label: '进行中' },
     completed: { type: 'success', label: '已完成' },

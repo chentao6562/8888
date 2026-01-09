@@ -64,8 +64,10 @@ const paymentStatusOptions = [
 
 const customers = ref<{ id: number; name: string }[]>([])
 
-const getStatusTag = (status: string) => {
-  const map: Record<string, { type: string; label: string }> = {
+type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+
+const getStatusTag = (status: string): { type: TagType; label: string } => {
+  const map: Record<string, { type: TagType; label: string }> = {
     pending: { type: 'warning', label: '待处理' },
     processing: { type: 'primary', label: '进行中' },
     completed: { type: 'success', label: '已完成' },
@@ -74,8 +76,8 @@ const getStatusTag = (status: string) => {
   return map[status] || { type: 'info', label: status }
 }
 
-const getPaymentStatusTag = (status: string) => {
-  const map: Record<string, { type: string; label: string }> = {
+const getPaymentStatusTag = (status: string): { type: TagType; label: string } => {
+  const map: Record<string, { type: TagType; label: string }> = {
     unpaid: { type: 'danger', label: '未付款' },
     partial: { type: 'warning', label: '部分付款' },
     paid: { type: 'success', label: '已付款' }

@@ -68,12 +68,14 @@ const statusOptions = [
 
 const projects = ref<{ id: number; name: string }[]>([])
 
+type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+
 const getCategoryLabel = (category: string) => {
   return categoryOptions.find(c => c.value === category)?.label || category
 }
 
-const getStatusTag = (status: string) => {
-  const map: Record<string, { type: string; label: string }> = {
+const getStatusTag = (status: string): { type: TagType; label: string } => {
+  const map: Record<string, { type: TagType; label: string }> = {
     normal: { type: 'success', label: '正常' },
     warning: { type: 'warning', label: '预警' },
     exceeded: { type: 'danger', label: '超支' }
