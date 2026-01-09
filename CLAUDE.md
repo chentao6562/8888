@@ -65,19 +65,29 @@ pm2 restart gongsiguanli-api          # 重启服务
 │   ├── 业务流程图.md
 │   ├── 数据库设计.md
 │   └── 原型设计.md
-└── server/                # 后端服务
+├── server/                # 后端服务
+│   ├── src/               # 源代码
+│   │   ├── index.ts       # 入口文件
+│   │   ├── routes/        # 路由
+│   │   ├── controllers/   # 控制器
+│   │   ├── middlewares/   # 中间件
+│   │   ├── services/      # 业务逻辑
+│   │   └── utils/         # 工具函数
+│   ├── prisma/            # Prisma ORM
+│   │   └── schema.prisma  # 数据库模型
+│   ├── dist/              # 编译输出
+│   ├── package.json
+│   └── tsconfig.json
+└── web/                   # 前端项目
     ├── src/               # 源代码
-    │   ├── index.ts       # 入口文件
-    │   ├── routes/        # 路由
-    │   ├── controllers/   # 控制器
-    │   ├── middlewares/   # 中间件
-    │   ├── services/      # 业务逻辑
+    │   ├── pages/         # 页面组件
+    │   ├── layouts/       # 布局组件
+    │   ├── stores/        # Pinia 状态管理
+    │   ├── router/        # 路由配置
     │   └── utils/         # 工具函数
-    ├── prisma/            # Prisma ORM
-    │   └── schema.prisma  # 数据库模型
-    ├── dist/              # 编译输出
+    ├── dist/              # 构建输出
     ├── package.json
-    └── tsconfig.json
+    └── vite.config.ts
 ```
 
 ## 数据库
@@ -98,6 +108,7 @@ mysql -u root -p'c65623518+' gongsiguanli_db
 
 | 服务 | 端口 | 地址 |
 |------|------|------|
+| 前端 Web | 80 | http://39.104.13.41 |
 | 后端 API | 3000 | http://39.104.13.41/api |
 | Webhook | 9000 | http://39.104.13.41/webhook |
 
@@ -114,21 +125,36 @@ mysql -u root -p'c65623518+' gongsiguanli_db
 | `gongsiguanli-api` | 后端 API 服务 | 3000 |
 | `webhook-listener` | GitHub 自动部署 | 9000 |
 
-## Git 配置
+## SSH 配置
 
-### 本地（多项目隔离）
+### 本地 SSH 配置 (~/.ssh/config)
 ```
-# ~/.ssh/config
+# 公司管理项目专用 - GitHub
 Host github-gongsiguanli
     HostName github.com
     User git
     IdentityFile ~/.ssh/id_ed25519_gongsiguanli
-```
-- 本项目 SSH 地址: `git@github-gongsiguanli:chentao6562/8888.git`
 
-### 服务器
-- Deploy Key 已配置，服务器可免密拉取
-- SSH 地址: `git@github.com:chentao6562/8888.git`
+# 阿里云服务器 - 公司管理系统（免密登录）
+Host aliyun-gongsiguanli
+    HostName 39.104.13.41
+    User root
+    IdentityFile ~/.ssh/id_ed25519_gongsiguanli
+    StrictHostKeyChecking no
+```
+
+### SSH 连接命令
+```bash
+# 连接服务器（无需密码）
+ssh aliyun-gongsiguanli
+
+# 执行远程命令
+ssh aliyun-gongsiguanli "pm2 list"
+```
+
+### Git 配置
+- 本项目 SSH 地址: `git@github-gongsiguanli:chentao6562/8888.git`
+- 服务器 Deploy Key 已配置，服务器可免密拉取
 
 ## GitHub Webhook 配置
 
