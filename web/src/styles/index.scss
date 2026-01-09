@@ -1,0 +1,172 @@
+/**
+ * 全局样式
+ */
+
+// 重置样式
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  font-size: 14px;
+  color: #303133;
+  background-color: #f5f7fa;
+}
+
+#app {
+  height: 100%;
+}
+
+// 滚动条样式
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #c0c4cc;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f5f7fa;
+}
+
+// 通用工具类
+.flex {
+  display: flex;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mb-10 {
+  margin-bottom: 10px;
+}
+
+.mb-20 {
+  margin-bottom: 20px;
+}
+
+.mt-10 {
+  margin-top: 10px;
+}
+
+.mt-20 {
+  margin-top: 20px;
+}
+
+// 页面容器
+.page-container {
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 4px;
+  min-height: calc(100vh - 140px);
+}
+
+// 页面头部
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+
+  .page-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+  }
+}
+
+// 搜索表单
+.search-form {
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+// 表格操作列
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+// 状态标签颜色
+.status-pending {
+  color: #e6a23c;
+}
+
+.status-success {
+  color: #67c23a;
+}
+
+.status-danger {
+  color: #f56c6c;
+}
+
+.status-info {
+  color: #909399;
+}
+
+// 卡片样式
+.stat-card {
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  color: #fff;
+
+  .stat-title {
+    font-size: 14px;
+    opacity: 0.8;
+    margin-bottom: 10px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 600;
+  }
+
+  .stat-change {
+    font-size: 12px;
+    margin-top: 8px;
+    opacity: 0.8;
+  }
+
+  &.blue {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  &.green {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  }
+
+  &.orange {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+
+  &.cyan {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
+}
