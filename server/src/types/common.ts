@@ -137,3 +137,9 @@ export class ValidationError extends AppError {
     super(message, 422, 'VALIDATION_ERROR');
   }
 }
+
+export class BusinessError extends AppError {
+  constructor(message: string = '业务逻辑错误') {
+    super(message, 400, 'BUSINESS_ERROR');
+  }
+}
